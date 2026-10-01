@@ -24,6 +24,7 @@ import {
 import { useJourney } from '../context/JourneyContext.js';
 import { useAuth } from '../context/AuthContext.js';
 import { PriorityType } from '../types/index.js';
+import { ThreeDTabNav, TabItem } from '../components/ThreeDTabNav.js';
 
 interface MobilityPin {
   id: string;
@@ -249,14 +250,14 @@ const SAMPLE_PINS: MobilityPin[] = [
   },
 ];
 
-const CATEGORIES = [
-  { id: 'all', label: 'All Ideas' },
-  { id: 'fastest', label: '⚡ Fastest Transit' },
-  { id: 'eco', label: '🌱 Zero Emission' },
-  { id: 'safer', label: '🛡️ Safe Corridors' },
-  { id: 'bike', label: '🚲 Scenic E-Bikes' },
-  { id: 'metro', label: '🚇 Metro Links' },
-  { id: 'accessible', label: '♿ Step-Free Access' },
+const TAB_ITEMS: TabItem[] = [
+  { id: 'all', label: 'All Ideas', icon: <Sparkles className="w-3.5 h-3.5 text-sage-500" />, badge: 9 },
+  { id: 'fastest', label: 'Rapid Transit', icon: <Zap className="w-3.5 h-3.5 text-amber-500" /> },
+  { id: 'eco', label: 'Zero Emission', icon: <Leaf className="w-3.5 h-3.5 text-sage-500" /> },
+  { id: 'safer', label: 'Safe Corridors', icon: <Shield className="w-3.5 h-3.5 text-rose-500" /> },
+  { id: 'bike', label: 'Scenic E-Bikes', icon: <Compass className="w-3.5 h-3.5 text-lavender-500" /> },
+  { id: 'metro', label: 'Metro Links', icon: <Navigation className="w-3.5 h-3.5 text-blue-500" /> },
+  { id: 'accessible', label: 'Step-Free Access', icon: <Accessibility className="w-3.5 h-3.5 text-purple-500" /> },
 ];
 
 export const LandingPage: React.FC = () => {
@@ -392,24 +393,13 @@ export const LandingPage: React.FC = () => {
           </div>
         </div>
 
-        {/* 2. CATEGORY PILL SELECTOR (PINTEREST STYLE) */}
-        <div className="max-w-[1680px] mx-auto px-4 sm:px-6 lg:px-8 pb-3 overflow-x-auto no-scrollbar flex items-center gap-2.5">
-          {CATEGORIES.map((cat) => {
-            const isActive = activeCategory === cat.id;
-            return (
-              <button
-                key={cat.id}
-                onClick={() => setActiveCategory(cat.id)}
-                className={`whitespace-nowrap px-4 py-2 rounded-full text-xs sm:text-sm font-semibold transition-all duration-200 active:scale-95 ${
-                  isActive
-                    ? 'bg-gray-900 text-white shadow-sm'
-                    : 'bg-white text-gray-700 border border-gray-200 hover:bg-gray-100 hover:text-gray-900'
-                }`}
-              >
-                {cat.label}
-              </button>
-            );
-          })}
+        {/* 2. 3D TACTILE TAB SELECTOR (PHYSICAL INSET ON ACTIVE) */}
+        <div className="max-w-[1680px] mx-auto px-4 sm:px-6 lg:px-8 pb-3 overflow-x-auto no-scrollbar flex items-center justify-start sm:justify-center">
+          <ThreeDTabNav
+            tabs={TAB_ITEMS}
+            activeTabId={activeCategory}
+            onChange={(id) => setActiveCategory(id)}
+          />
         </div>
       </header>
 
@@ -424,7 +414,7 @@ export const LandingPage: React.FC = () => {
         </p>
       </section>
 
-      {/* 4. FLUID RESPONSIVE MASONRY GRID FEED */}
+      {/* 4. FLUID RESPONSIVE MASONRY GRID FEED WITH CASCADING ENTRANCE & 3D TILT */}
       <main className="max-w-[1680px] mx-auto px-4 sm:px-6 lg:px-8 pb-20">
         {filteredPins.length === 0 ? (
           <div className="text-center py-20 bg-white rounded-3xl border border-gray-200 max-w-lg mx-auto shadow-sm p-8 space-y-4">
@@ -445,16 +435,17 @@ export const LandingPage: React.FC = () => {
           </div>
         ) : (
           <div className="columns-1 sm:columns-2 md:columns-3 lg:columns-4 xl:columns-5 gap-6">
-            {filteredPins.map((pin) => {
+            {filteredPins.map((pin, idx) => {
               const isSaved = !!savedPins[pin.id];
+              const staggerClass = `stagger-${(idx % 9) + 1}`;
 
               return (
                 <div
                   key={pin.id}
                   onClick={() => setSelectedPin(pin)}
-                  className="break-inside-avoid mb-6 group cursor-pointer"
+                  className={`break-inside-avoid mb-6 group cursor-pointer cascade-item ${staggerClass} perspective-container`}
                 >
-                  <div className="bg-white rounded-3xl overflow-hidden border border-gray-200/80 shadow-[0_4px_20px_rgba(0,0,0,0.05)] hover:shadow-[0_20px_35px_rgba(0,0,0,0.1)] transition-all duration-300 transform hover:-translate-y-1.5 flex flex-col">
+                  <div className="clay-card card-3d rounded-cute bg-warm-white border border-warm-border/80 overflow-hidden transition-all duration-300 transform hover:-translate-y-2 flex flex-col squish-click">
                     {/* Visual Media Container with Zoom Hover */}
                     <div className="relative overflow-hidden bg-gray-100">
                       <img
@@ -482,13 +473,13 @@ export const LandingPage: React.FC = () => {
                           <span>{pin.durationMins} min</span>
                         </span>
 
-                        {/* Pinterest Red Save Button (Hover Reveal on desktop, persistent on mobile) */}
+                        {/* Tactile 3D Save Button */}
                         <button
                           onClick={(e) => toggleSave(pin.id, e)}
-                          className={`pointer-events-auto px-3.5 py-1.5 rounded-full font-bold text-xs shadow-md transition-all duration-200 active:scale-90 flex items-center gap-1.5 ${
+                          className={`pointer-events-auto px-3.5 py-1.5 rounded-full font-bold text-xs shadow-md transition-all duration-200 squish-click flex items-center gap-1.5 ${
                             isSaved
-                              ? 'bg-black text-white hover:bg-gray-800'
-                              : 'bg-[#E60023] hover:bg-[#c9001f] text-white opacity-90 group-hover:opacity-100'
+                              ? 'bg-warm-charcoal text-white hover:bg-black'
+                              : 'clay-pill-floating bg-rose-400 hover:bg-rose-500 text-white'
                           }`}
                         >
                           <Bookmark className={`w-3.5 h-3.5 ${isSaved ? 'fill-white' : ''}`} />
@@ -501,9 +492,9 @@ export const LandingPage: React.FC = () => {
                         <button
                           onClick={(e) => handleLaunchRoute(pin, e)}
                           disabled={isRouting}
-                          className="px-3.5 py-1.5 rounded-full font-bold text-xs bg-white/95 hover:bg-white text-gray-900 shadow-lg backdrop-blur-md flex items-center gap-1.5 hover:scale-105 transition-all"
+                          className="px-3.5 py-1.5 rounded-full font-bold text-xs bg-white/95 hover:bg-white text-gray-900 shadow-lg backdrop-blur-md flex items-center gap-1.5 hover:scale-105 transition-all squish-click"
                         >
-                          <Navigation className="w-3.5 h-3.5 text-[#E60023]" />
+                          <Navigation className="w-3.5 h-3.5 text-rose-500" />
                           <span>Route This</span>
                         </button>
                       </div>
