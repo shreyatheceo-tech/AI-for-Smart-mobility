@@ -10,23 +10,29 @@ import { PreferencesPage } from './pages/PreferencesPage.js';
 import { LoginPage } from './pages/LoginPage.js';
 import { RegisterPage } from './pages/RegisterPage.js';
 import { ProfilePage } from './pages/ProfilePage.js';
+import { AdminDashboardPage } from './pages/AdminDashboardPage.js';
 
 const MainLayout: React.FC = () => {
   const location = useLocation();
-  const isLanding = location.pathname === '/';
+  const isElevated =
+    location.pathname === '/' ||
+    location.pathname === '/admin' ||
+    location.pathname === '/login' ||
+    location.pathname === '/register';
 
   return (
     <div
       className={`flex flex-col min-h-screen font-sans transition-colors duration-200 ${
-        isLanding
-          ? 'bg-[#F9F9F9] text-gray-900 selection:bg-[#E60023] selection:text-white'
+        isElevated
+          ? 'bg-cream-100 text-warm-charcoal selection:bg-rose-400 selection:text-white'
           : 'bg-slate-950 text-slate-100 selection:bg-cyan-500 selection:text-slate-950'
       }`}
     >
-      {!isLanding && <Navbar />}
+      {!isElevated && <Navbar />}
       <main className="flex-1">
         <Routes>
           <Route path="/" element={<LandingPage />} />
+          <Route path="/admin" element={<AdminDashboardPage />} />
           <Route path="/app" element={<DashboardPage />} />
           <Route path="/app/results" element={<ResultsPage />} />
           <Route path="/app/history" element={<HistoryPage />} />
@@ -37,7 +43,7 @@ const MainLayout: React.FC = () => {
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </main>
-      {!isLanding && <Footer />}
+      {!isElevated && <Footer />}
     </div>
   );
 };
