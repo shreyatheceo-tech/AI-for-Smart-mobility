@@ -75,12 +75,21 @@ export const DashboardPage: React.FC = () => {
   useEffect(() => {
     const qOrigin = searchParams.get('origin');
     const qDest = searchParams.get('destination');
-    const qPriority = searchParams.get('priority') as PriorityType | null;
+    const rawPrio = searchParams.get('priority');
     if (qOrigin) setOrigin(qOrigin);
     if (qDest) setDestination(qDest);
-    if (qPriority && ['fastest', 'cheapest', 'eco', 'safer', 'accessible'].includes(qPriority)) {
-      setPrimaryPriority(qPriority);
-      setSelectedPriorities([qPriority]);
+    if (rawPrio) {
+      const l = rawPrio.toLowerCase();
+      let p: PriorityType = 'fastest';
+      if (l.includes('cheap') || l.includes('budget') || l.includes('cost')) p = 'cheapest';
+      else if (l.includes('eco') || l.includes('green') || l.includes('carbon')) p = 'eco';
+      else if (l.includes('safe') || l.includes('night') || l.includes('secure')) p = 'safer';
+      else if (l.includes('access') || l.includes('wheelchair')) p = 'accessible';
+      setPrimaryPriority(p);
+      setSelectedPriorities([p]);
+    }
+    if (qOrigin || qDest) {
+      setInputMode('structured');
     }
   }, [searchParams]);
 

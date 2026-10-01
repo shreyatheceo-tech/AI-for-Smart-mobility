@@ -561,11 +561,27 @@ Key Responsibilities:
       const actionMatch = cleanReply.match(/\[ACTION:\s*PLAN_ROUTE\s*\|\s*([^|]+)\s*\|\s*([^|]+)(?:\s*\|\s*([^\]]+))?\]/i);
       if (actionMatch) {
         cleanReply = cleanReply.replace(actionMatch[0], '').trim();
+        const rawOrig = actionMatch[1].trim();
+        const rawDest = actionMatch[2].trim();
+        const rawPrio = actionMatch[3]?.trim();
+
+        const cleanOrig = rawOrig.replace(/\s+(in rush hour|during peak hours|right now|today|at night|in the morning|please)$/i, '').trim();
+        const cleanDest = rawDest.replace(/\s+(in rush hour|during peak hours|right now|today|at night|in the morning|please)$/i, '').trim();
+        
+        let normalizedPrio: PriorityType = 'fastest';
+        if (rawPrio) {
+          const l = rawPrio.toLowerCase();
+          if (l.includes('cheap') || l.includes('budget') || l.includes('cost')) normalizedPrio = 'cheapest';
+          else if (l.includes('eco') || l.includes('green') || l.includes('carbon')) normalizedPrio = 'eco';
+          else if (l.includes('safe') || l.includes('night') || l.includes('secure')) normalizedPrio = 'safer';
+          else if (l.includes('access') || l.includes('wheelchair')) normalizedPrio = 'accessible';
+        }
+
         quickAction = {
           type: 'PLAN_ROUTE',
-          origin: actionMatch[1].trim(),
-          destination: actionMatch[2].trim(),
-          priority: (actionMatch[3]?.trim().toLowerCase() as PriorityType) || 'fastest',
+          origin: cleanOrig,
+          destination: cleanDest,
+          priority: normalizedPrio,
         };
       }
 
