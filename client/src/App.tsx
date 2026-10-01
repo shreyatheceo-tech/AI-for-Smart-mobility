@@ -1,7 +1,5 @@
 import React from 'react';
-import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom';
-import { Navbar } from './components/Navbar.js';
-import { Footer } from './components/Footer.js';
+import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { LandingPage } from './pages/LandingPage.js';
 import { DashboardPage } from './pages/DashboardPage.js';
 import { ResultsPage } from './pages/ResultsPage.js';
@@ -12,46 +10,25 @@ import { RegisterPage } from './pages/RegisterPage.js';
 import { ProfilePage } from './pages/ProfilePage.js';
 import { AdminDashboardPage } from './pages/AdminDashboardPage.js';
 
-const MainLayout: React.FC = () => {
-  const location = useLocation();
-  const isElevated =
-    location.pathname === '/' ||
-    location.pathname === '/admin' ||
-    location.pathname === '/login' ||
-    location.pathname === '/register';
-
-  return (
-    <div
-      className={`flex flex-col min-h-screen font-sans transition-colors duration-200 ${
-        isElevated
-          ? 'bg-cream-100 text-warm-charcoal selection:bg-rose-400 selection:text-white'
-          : 'bg-slate-950 text-slate-100 selection:bg-cyan-500 selection:text-slate-950'
-      }`}
-    >
-      {!isElevated && <Navbar />}
-      <main className="flex-1">
-        <Routes>
-          <Route path="/" element={<LandingPage />} />
-          <Route path="/admin" element={<AdminDashboardPage />} />
-          <Route path="/app" element={<DashboardPage />} />
-          <Route path="/app/results" element={<ResultsPage />} />
-          <Route path="/app/history" element={<HistoryPage />} />
-          <Route path="/app/preferences" element={<PreferencesPage />} />
-          <Route path="/login" element={<LoginPage />} />
-          <Route path="/register" element={<RegisterPage />} />
-          <Route path="/profile" element={<ProfilePage />} />
-          <Route path="*" element={<Navigate to="/" replace />} />
-        </Routes>
-      </main>
-      {!isElevated && <Footer />}
-    </div>
-  );
-};
-
 export const App: React.FC = () => {
   return (
     <BrowserRouter>
-      <MainLayout />
+      <div className="flex flex-col min-h-screen bg-cream-100 text-warm-charcoal selection:bg-rose-400 selection:text-white font-sans antialiased">
+        <main className="flex-1">
+          <Routes>
+            <Route path="/" element={<LandingPage />} />
+            <Route path="/admin" element={<AdminDashboardPage />} />
+            <Route path="/app" element={<DashboardPage />} />
+            <Route path="/app/results" element={<ResultsPage />} />
+            <Route path="/app/history" element={<HistoryPage />} />
+            <Route path="/app/preferences" element={<PreferencesPage />} />
+            <Route path="/login" element={<LoginPage />} />
+            <Route path="/register" element={<RegisterPage />} />
+            <Route path="/profile" element={<ProfilePage />} />
+            <Route path="*" element={<Navigate to="/" replace />} />
+          </Routes>
+        </main>
+      </div>
     </BrowserRouter>
   );
 };
