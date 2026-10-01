@@ -24,7 +24,11 @@ export const App: React.FC = () => {
             <Route path="/app/history" element={<HistoryPage />} />
             <Route path="/app/preferences" element={<PreferencesPage />} />
             <Route path="/login" element={<LoginPage />} />
+            <Route path="/signin" element={<Navigate to="/login" replace />} />
+            <Route path="/sign-in" element={<Navigate to="/login" replace />} />
             <Route path="/register" element={<RegisterPage />} />
+            <Route path="/signup" element={<Navigate to="/register" replace />} />
+            <Route path="/sign-up" element={<Navigate to="/register" replace />} />
             <Route path="/profile" element={<ProfilePage />} />
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>

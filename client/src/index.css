@@ -8,12 +8,23 @@ html {
 
 body {
   margin: 0;
-  background-color: #020617;
-  color: #f8fafc;
+  background-color: #FAF8F5;
+  color: #111827;
   min-height: 100vh;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   font-feature-settings: "cv02", "cv03", "cv04", "cv11";
+}
+
+/* Global Input Text High-Contrast Rules */
+input, textarea, select {
+  color: #111827 !important;
+  caret-color: #111827 !important;
+}
+
+input::placeholder, textarea::placeholder {
+  color: #6b7280 !important;
+  opacity: 1 !important;
 }
 
 /* Custom scrollbars */
