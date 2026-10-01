@@ -1,5 +1,5 @@
-import React from 'react';
-import { Zap, DollarSign, Leaf, Shield, Accessibility, Check } from 'lucide-react';
+import React, { useState } from 'react';
+import { Zap, DollarSign, Leaf, Shield, Accessibility, Check, Info } from 'lucide-react';
 import { PriorityType } from '../types/index.js';
 
 interface PriorityOption {
@@ -67,6 +67,8 @@ export const PrioritySelector: React.FC<PrioritySelectorProps> = ({
   onChangePrimary,
   onToggleSecondary,
 }) => {
+  const [showSaferTooltip, setShowSaferTooltip] = useState(false);
+
   return (
     <div className="space-y-3">
       <div className="flex items-center justify-between">
@@ -111,7 +113,7 @@ export const PrioritySelector: React.FC<PrioritySelectorProps> = ({
                       e.stopPropagation();
                       onToggleSecondary(p.id);
                     }}
-                    className="text-[9px] px-1 py-0.5 rounded bg-slate-800 text-slate-300 flex items-center gap-0.5"
+                    className="text-[9px] px-1 py-0.5 rounded bg-slate-800 text-slate-300 flex items-center gap-0.5 hover:text-white"
                     title="Click to remove secondary"
                   >
                     <Check className="w-2.5 h-2.5 text-cyan-400" /> Also
@@ -119,9 +121,58 @@ export const PrioritySelector: React.FC<PrioritySelectorProps> = ({
                 ) : null}
               </div>
 
-              <div className="font-semibold text-xs text-white leading-tight">
-                {p.label}
+              {/* Title with Info Tooltip for "Safer" */}
+              <div className="flex items-center justify-between gap-1">
+                <div className="font-semibold text-xs text-white leading-tight">
+                  {p.label}
+                </div>
+
+                {p.id === 'safer' && (
+                  <div className="relative inline-flex items-center group/tooltip">
+                    <button
+                      type="button"
+                      aria-label="Safety metric calculation parameters"
+                      aria-describedby="safer-tooltip-desc"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setShowSaferTooltip(!showSaferTooltip);
+                      }}
+                      onMouseEnter={() => setShowSaferTooltip(true)}
+                      onMouseLeave={() => setShowSaferTooltip(false)}
+                      onFocus={() => setShowSaferTooltip(true)}
+                      onBlur={() => setShowSaferTooltip(false)}
+                      className="p-0.5 text-slate-400 hover:text-cyan-300 focus:text-cyan-300 focus:outline-none focus-visible:ring-1 focus-visible:ring-cyan-400 rounded transition-colors"
+                      title="Learn how Safety Index is quantified"
+                    >
+                      <Info className="w-3.5 h-3.5" />
+                    </button>
+
+                    {/* WCAG High-Contrast Accessible Tooltip */}
+                    <div
+                      id="safer-tooltip-desc"
+                      role="tooltip"
+                      className={`absolute bottom-full right-0 sm:left-1/2 sm:-translate-x-1/2 mb-2 w-64 p-3 rounded-xl bg-slate-900 border border-cyan-500/50 text-slate-100 text-[11px] leading-relaxed shadow-2xl backdrop-blur-md transition-all duration-200 z-50 ${
+                        showSaferTooltip
+                          ? 'opacity-100 visible translate-y-0 pointer-events-auto'
+                          : 'opacity-0 invisible translate-y-1 pointer-events-none group-hover/tooltip:opacity-100 group-hover/tooltip:visible group-hover/tooltip:translate-y-0 group-focus-within/tooltip:opacity-100 group-focus-within/tooltip:visible group-focus-within/tooltip:translate-y-0'
+                      }`}
+                    >
+                      <div className="flex items-start gap-2">
+                        <Shield className="w-4 h-4 text-cyan-400 shrink-0 mt-0.5" />
+                        <div>
+                          <span className="font-bold text-cyan-300 block mb-0.5">Quantified Safety Index:</span>
+                          <span className="text-slate-200">
+                            Safety index dynamically calculated using open-source CCTV density data, historical incident reports (last 30 days), and real-time crowd volume.
+                          </span>
+                        </div>
+                      </div>
+                      {/* Tooltip downward arrow */}
+                      <div className="absolute top-full right-3 sm:left-1/2 sm:-translate-x-1/2 border-4 border-transparent border-t-cyan-500/50" />
+                    </div>
+                  </div>
+                )}
               </div>
+
               <div className="text-[10px] text-slate-400 line-clamp-1 mt-0.5">
                 {p.sublabel}
               </div>

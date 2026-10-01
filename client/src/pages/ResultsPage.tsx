@@ -15,6 +15,8 @@ import {
 import { useJourney } from '../context/JourneyContext.js';
 import { useAuth } from '../context/AuthContext.js';
 import { AiRecommendationCard } from '../components/AiRecommendationCard.js';
+import { AiRationaleCard } from '../components/AiRationaleCard.js';
+import { ActionableCtas } from '../components/ActionableCtas.js';
 import { RouteComparisonCard } from '../components/RouteComparisonCard.js';
 import { InteractiveMap } from '../components/InteractiveMap.js';
 import { NavigationSimulator } from '../components/NavigationSimulator.js';
@@ -151,6 +153,8 @@ export const ResultsPage: React.FC = () => {
               <RouteComparisonCard
                 key={opt.id}
                 option={opt}
+                origin={origin}
+                destination={destination}
                 isSelected={activeOption.id === opt.id}
                 isAiTopPick={opt.id === recommendation.recommendedOptionId}
                 onSelect={() => setSelectedOption(opt)}
@@ -160,8 +164,14 @@ export const ResultsPage: React.FC = () => {
           </div>
         </div>
 
-        {/* Right Column (5 cols): Interactive Map, Weather & Radar */}
-        <div className="lg:col-span-5 space-y-6 lg:sticky lg:top-20">
+        {/* Right Column (5 cols): AI Rationale Card + Interactive Map, Actionable CTAs & Radar */}
+        <div className="lg:col-span-5 space-y-5 lg:sticky lg:top-20">
+          {/* Task 2: AI Rationale Card to sit directly above the routing map */}
+          <AiRationaleCard
+            selectedOption={activeOption}
+            carOption={options.find(o => o.mode === 'car')}
+          />
+
           <div className="space-y-2">
             <div className="flex items-center justify-between text-xs text-slate-400">
               <span className="font-semibold text-white uppercase tracking-wider text-[11px]">
@@ -172,13 +182,22 @@ export const ResultsPage: React.FC = () => {
               </span>
             </div>
 
-            {/* Leaflet Map */}
+            {/* Leaflet / Google Map */}
             <InteractiveMap
               origin={origin}
               destination={destination}
               originCoords={originCoords}
               destinationCoords={destinationCoords}
               selectedOption={activeOption}
+            />
+          </div>
+
+          {/* Task 3: Close the Transaction Loop for the active route */}
+          <div className="rounded-2xl p-4 bg-slate-900/90 border border-slate-800 shadow-xl">
+            <ActionableCtas
+              option={activeOption}
+              origin={origin}
+              destination={destination}
             />
           </div>
 

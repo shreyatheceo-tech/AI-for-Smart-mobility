@@ -14,11 +14,14 @@ import {
 } from 'lucide-react';
 import { MobilityOption } from '../types/index.js';
 import { getModeIcon } from './AiRecommendationCard.js';
+import { ActionableCtas } from './ActionableCtas.js';
 
 interface RouteComparisonCardProps {
   option: MobilityOption;
   isSelected: boolean;
   isAiTopPick: boolean;
+  origin?: string;
+  destination?: string;
   onSelect: () => void;
   onStartRoute?: () => void;
 }
@@ -27,6 +30,8 @@ export const RouteComparisonCard: React.FC<RouteComparisonCardProps> = ({
   option,
   isSelected,
   isAiTopPick,
+  origin = 'Origin',
+  destination = 'Destination',
   onSelect,
 }) => {
   const [expanded, setExpanded] = useState(false);
@@ -220,6 +225,9 @@ export const RouteComparisonCard: React.FC<RouteComparisonCardProps> = ({
               </div>
             ))}
           </div>
+
+          {/* Action-Oriented Buttons for Selected Transit Modes */}
+          <ActionableCtas option={option} origin={origin} destination={destination} />
         </div>
       )}
     </div>

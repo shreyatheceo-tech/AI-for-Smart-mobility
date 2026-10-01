@@ -19,6 +19,7 @@ import {
 import { useJourney } from '../context/JourneyContext.js';
 import { useAuth } from '../context/AuthContext.js';
 import { PrioritySelector } from '../components/PrioritySelector.js';
+import { AccessibilityAccordion } from '../components/AccessibilityAccordion.js';
 import { PriorityType, TransportMode } from '../types/index.js';
 
 const QUICK_PRESETS = [
@@ -54,8 +55,10 @@ export const DashboardPage: React.FC = () => {
     user?.preferences?.accessibilityNeeds || []
   );
   const [maxWalkMeters, setMaxWalkMeters] = useState<number>(
-    user?.preferences?.maxWalkMeters || 800
+    user?.preferences?.maxWalkMeters || 200
   );
+  const [strictlyStepFree, setStrictlyStepFree] = useState<boolean>(false);
+  const [requiresAuditorySignals, setRequiresAuditorySignals] = useState<boolean>(false);
   const [showAdvanced, setShowAdvanced] = useState(false);
 
   // Natural Language prompt
@@ -85,6 +88,14 @@ export const DashboardPage: React.FC = () => {
     }
     setErrorMsg(null);
 
+    const mergedAccessibilityNeeds = [...accessibilityNeeds];
+    if (strictlyStepFree && !mergedAccessibilityNeeds.includes('strictly_step_free')) {
+      mergedAccessibilityNeeds.push('strictly_step_free');
+    }
+    if (requiresAuditorySignals && !mergedAccessibilityNeeds.includes('auditory_signals')) {
+      mergedAccessibilityNeeds.push('auditory_signals');
+    }
+
     try {
       await runAnalysis({
         origin: origin.trim(),
@@ -92,7 +103,7 @@ export const DashboardPage: React.FC = () => {
         departureTime,
         primaryPriority,
         selectedPriorities,
-        accessibilityNeeds,
+        accessibilityNeeds: mergedAccessibilityNeeds,
         maxWalkMeters,
       });
       navigate('/app/results');
@@ -316,69 +327,17 @@ export const DashboardPage: React.FC = () => {
               onToggleSecondary={handleToggleSecondary}
             />
 
-            {/* Advanced Filters Toggle */}
-            <div>
-              <button
-                type="button"
-                onClick={() => setShowAdvanced(!showAdvanced)}
-                className="text-xs text-cyan-400 hover:text-cyan-300 flex items-center gap-1.5 font-medium transition-colors"
-              >
-                <Sliders className="w-3.5 h-3.5" />
-                <span>{showAdvanced ? 'Hide Accessibility & Walk Filters' : 'Show Accessibility & Walk Constraints'}</span>
-              </button>
-
-              {showAdvanced && (
-                <div className="mt-4 p-4 rounded-xl bg-slate-950/60 border border-slate-800/80 space-y-4 text-xs">
-                  {/* Accessibility Options */}
-                  <div className="space-y-2">
-                    <label className="font-semibold text-slate-300 flex items-center gap-1.5">
-                      <Accessibility className="w-3.5 h-3.5 text-purple-400" />
-                      <span>Accessibility Requirements</span>
-                    </label>
-                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
-                      {[
-                        { id: 'wheelchair', label: 'Wheelchair / Ramp' },
-                        { id: 'elevator', label: 'Elevator Ingress' },
-                        { id: 'step_free', label: 'Step-Free Boarding' },
-                      ].map(opt => (
-                        <label
-                          key={opt.id}
-                          className="flex items-center gap-2 p-2 rounded-lg bg-slate-900 border border-slate-800 cursor-pointer"
-                        >
-                          <input
-                            type="checkbox"
-                            checked={accessibilityNeeds.includes(opt.id)}
-                            onChange={() => handleToggleAccessibility(opt.id)}
-                            className="rounded border-slate-700 text-cyan-500 focus:ring-0"
-                          />
-                          <span className="text-slate-300">{opt.label}</span>
-                        </label>
-                      ))}
-                    </div>
-                  </div>
-
-                  {/* Max Walking Slider */}
-                  <div className="space-y-1.5">
-                    <div className="flex justify-between text-slate-300">
-                      <span className="flex items-center gap-1.5">
-                        <Footprints className="w-3.5 h-3.5 text-emerald-400" />
-                        <span>Max Walking Distance</span>
-                      </span>
-                      <strong className="text-cyan-400">{maxWalkMeters} meters</strong>
-                    </div>
-                    <input
-                      type="range"
-                      min={200}
-                      max={3000}
-                      step={100}
-                      value={maxWalkMeters}
-                      onChange={e => setMaxWalkMeters(parseInt(e.target.value, 10))}
-                      className="w-full accent-cyan-400 cursor-pointer"
-                    />
-                  </div>
-                </div>
-              )}
-            </div>
+            {/* Granular Accessibility Controls Configuration Accordion */}
+            <AccessibilityAccordion
+              isOpen={showAdvanced}
+              onToggle={() => setShowAdvanced(!showAdvanced)}
+              maxWalkDistance={maxWalkMeters}
+              onChangeMaxWalk={setMaxWalkMeters}
+              strictlyStepFree={strictlyStepFree}
+              onChangeStrictlyStepFree={setStrictlyStepFree}
+              requiresAuditorySignals={requiresAuditorySignals}
+              onChangeRequiresAuditorySignals={setRequiresAuditorySignals}
+            />
 
             {/* Submit Button */}
             <button
