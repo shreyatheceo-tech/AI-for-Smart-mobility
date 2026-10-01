@@ -1,0 +1,27 @@
+{
+  "name": "mobimind-ai",
+  "version": "1.0.0",
+  "description": "MobiMind AI – Intelligent Multi-Modal Mobility Copilot",
+  "scripts": {
+    "install:all": "npm install && cd server && npm install && cd ../client && npm install",
+    "dev:server": "cd server && npm run dev",
+    "dev:client": "cd client && npm run dev",
+    "dev": "concurrently \"npm run dev:server\" \"npm run dev:client\"",
+    "build": "cd server && npm run build && cd ../client && npm run build",
+    "start": "cd server && npm start"
+  },
+  "keywords": [
+    "mobility",
+    "ai",
+    "gemini",
+    "transit",
+    "copilot",
+    "smart-city",
+    "multi-modal"
+  ],
+  "author": "MobiMind Team",
+  "license": "MIT",
+  "devDependencies": {
+    "concurrently": "^8.2.2"
+  }
+}
