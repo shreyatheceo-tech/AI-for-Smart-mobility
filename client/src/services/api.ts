@@ -5,6 +5,7 @@ import {
   PriorityType,
   User,
   UserPreferences,
+  ChatResponse,
 } from '../types/index.js';
 
 const API_BASE =
@@ -147,6 +148,23 @@ export const api = {
   async deleteJourney(id: string): Promise<{ success: boolean }> {
     return request<{ success: boolean }>(`/journeys/${id}`, {
       method: 'DELETE',
+    });
+  },
+
+  // AI Assistant Chat
+  async chat(params: {
+    message: string;
+    history?: { role: 'user' | 'model'; text: string }[];
+    context?: {
+      origin?: string;
+      destination?: string;
+      activePriority?: string;
+      currentRouteTitle?: string;
+    };
+  }): Promise<ChatResponse> {
+    return request<ChatResponse>('/mobility/chat', {
+      method: 'POST',
+      body: JSON.stringify(params),
     });
   },
 };

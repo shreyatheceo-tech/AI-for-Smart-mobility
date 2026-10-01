@@ -133,3 +133,29 @@ export interface ParsedTravelIntent {
   preferredModes?: TransportMode[];
   clarification?: string;
 }
+
+export interface ChatMessage {
+  id?: string;
+  role: 'user' | 'model';
+  text: string;
+  timestamp?: string;
+  quickAction?: {
+    type: 'PLAN_ROUTE';
+    origin: string;
+    destination: string;
+    priority?: PriorityType;
+  };
+}
+
+export interface ChatResponse {
+  success: boolean;
+  reply: string;
+  suggestedPrompts: string[];
+  quickAction?: {
+    type: 'PLAN_ROUTE';
+    origin: string;
+    destination: string;
+    priority?: PriorityType;
+  };
+}
+

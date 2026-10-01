@@ -6,13 +6,61 @@ import {
   PriorityType,
   TransportMode,
   UserPreferences,
+  ChatMessage,
+  ChatResponse,
 } from '../types/index.js';
 import { getCurrentWeather } from './weatherService.js';
 
 let genAI: GoogleGenerativeAI | null = null;
-if (config.geminiApiKey) {
-  genAI = new GoogleGenerativeAI(config.geminiApiKey);
+
+function getGenAI(): GoogleGenerativeAI | null {
+  const key = config.geminiApiKey || process.env.GEMINI_API_KEY;
+  if (!key) return null;
+  if (!genAI) {
+    genAI = new GoogleGenerativeAI(key);
+  }
+  return genAI;
 }
+
+const CANDIDATE_MODELS = ['gemini-3.5-flash', 'gemini-3.8-flash', 'gemini-2.5-flash-lite', 'gemini-flash-latest'];
+
+async function executeGeminiPrompt(promptText: string): Promise<string> {
+  const ai = getGenAI();
+  if (!ai) throw new Error('Gemini API key is not configured');
+
+  let lastError: any = null;
+  for (const modelName of CANDIDATE_MODELS) {
+    try {
+      const model = ai.getGenerativeModel({ model: modelName });
+      const res = await model.generateContent(promptText);
+      return res.response.text();
+    } catch (err: any) {
+      lastError = err;
+      console.warn(`[Gemini Failover] Model ${modelName} returned: ${err.message?.slice(0, 70)}. Falling to next...`);
+    }
+  }
+  throw lastError;
+}
+
+async function executeGeminiChat(contents: any[]): Promise<string> {
+  const ai = getGenAI();
+  if (!ai) throw new Error('Gemini API key is not configured');
+
+  let lastError: any = null;
+  for (const modelName of CANDIDATE_MODELS) {
+    try {
+      const model = ai.getGenerativeModel({ model: modelName });
+      const res = await model.generateContent({ contents });
+      return res.response.text();
+    } catch (err: any) {
+      lastError = err;
+      console.warn(`[Gemini Failover] Model ${modelName} returned: ${err.message?.slice(0, 70)}. Falling to next...`);
+    }
+  }
+  throw lastError;
+}
+
+
 
 // ----------------- HEURISTIC ADVISORY SYNTHESIS (FALLBACK / BASELINE) ----------------- //
 
@@ -131,13 +179,9 @@ export async function generateAiDecision(
 ): Promise<AiRecommendation> {
   const fallback = buildHeuristicRecommendation(origin, destination, primaryPriority, options, userPreferences);
 
-  // If no Gemini API key configured, seamlessly return the heuristic copilot recommendation
-  if (!config.geminiApiKey || !genAI) {
-    return fallback;
-  }
-
   try {
-    const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' });
+    const ai = getGenAI();
+    if (!ai) return fallback;
     const weather = getCurrentWeather();
 
     const prompt = `
@@ -174,8 +218,7 @@ Return ONLY valid JSON with this exact schema (no markdown fences, no extra text
 }
 `;
 
-    const result = await model.generateContent(prompt);
-    const text = result.response.text().trim();
+    const text = (await executeGeminiPrompt(prompt)).trim();
 
     // Strip markdown formatting if any
     const cleaned = text.replace(/^```json\s*/i, '').replace(/```\s*$/i, '').trim();
@@ -264,10 +307,8 @@ export async function parseNaturalLanguageIntent(query: string): Promise<ParsedT
   }
 
   // If Gemini API is available, ask Gemini to parse complex ambiguous queries
-  if (config.geminiApiKey && genAI) {
-    try {
-      const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' });
-      const prompt = `
+  try {
+    const prompt = `
 Extract travel parameters from the following user natural language query:
 "${query}"
 
@@ -280,9 +321,9 @@ Output ONLY a JSON object with this format (no markdown fences, no explanation):
   "accessibilityNeeds": string[]
 }
 `;
-      const res = await model.generateContent(prompt);
-      const cleaned = res.response.text().trim().replace(/^```json\s*/i, '').replace(/```\s*$/i, '').trim();
-      const parsed = JSON.parse(cleaned);
+    const res = await executeGeminiPrompt(prompt);
+    const cleaned = res.trim().replace(/^```json\s*/i, '').replace(/```\s*$/i, '').trim();
+    const parsed = JSON.parse(cleaned);
 
       if (parsed.origin && parsed.destination) {
         return {
@@ -296,7 +337,6 @@ Output ONLY a JSON object with this format (no markdown fences, no explanation):
     } catch {
       // Return heuristic parse on error
     }
-  }
 
   return {
     origin: origin || 'College',
@@ -306,3 +346,239 @@ Output ONLY a JSON object with this format (no markdown fences, no explanation):
     accessibilityNeeds,
   };
 }
+
+// ----------------- INTELLIGENT LOCAL COPILOT FALLBACK ----------------- //
+
+function generateLocalCopilotResponse(
+  message: string,
+  context?: {
+    origin?: string;
+    destination?: string;
+    activePriority?: PriorityType;
+    currentRouteTitle?: string;
+  },
+  weather?: any
+): ChatResponse {
+  const lower = message.toLowerCase();
+
+  const fromToMatch = message.match(/(?:from|between)\s+([^,]+?)\s+(?:to|and)\s+([^,?.!]+)/i);
+  if (fromToMatch) {
+    const orig = fromToMatch[1].trim();
+    const dest = fromToMatch[2].trim();
+    return {
+      reply: `I would love to help you travel from **${orig}** to **${dest}**! 🚇
+
+Here is a quick multi-modal assessment:
+• 🚇 **Metro Line**: Best if you are traveling during rush hours to avoid surface road bottlenecks.
+• 🚕 **EV Ride-hail / Cab**: Door-to-door comfort, though typically 3-5x the cost of rail transit.
+• 🚶 **Last-Mile & Micro-mobility**: Great for the initial or final 1 km connection.
+
+I can run an immediate multi-modal comparison with live safety indices, carbon footprint, and fare breakdown!`,
+      suggestedPrompts: [
+        `Plan route from ${orig} to ${dest}`,
+        'Show lowest fare options',
+        'Check well-lit & high CCTV routes',
+      ],
+      quickAction: {
+        type: 'PLAN_ROUTE',
+        origin: orig,
+        destination: dest,
+        priority: 'fastest',
+      },
+    };
+  }
+
+  if (lower.includes('rain') || lower.includes('weather') || lower.includes('monsoon') || lower.includes('umbrella')) {
+    return {
+      reply: `Live Weather Status: **${weather?.condition || 'Partly Cloudy'}** at **${weather?.temperatureC || 27}°C** (${weather?.advisory || 'Smooth travel conditions'}).
+
+**Rain & Monsoon Commute Advisory:**
+• 🚇 **Metro Rail**: 100% sheltered boarding and grade-separated tracks—completely unaffected by road waterlogging!
+• 🚌 **AC City Buses**: Good alternative, though anticipate a 10-15 minute traffic delay on ring roads.
+• 🚲 **Micro-mobility**: Recommend pausing open two-wheeler / cycle usage during active heavy showers.`,
+      suggestedPrompts: [
+        'Find 100% sheltered routes',
+        'Compare Metro vs Cabs in rain',
+        'Check station elevator access',
+      ],
+    };
+  }
+
+  if (lower.includes('safe') || lower.includes('night') || lower.includes('cctv') || lower.includes('women') || lower.includes('secure')) {
+    return {
+      reply: `Passenger safety is our top priority! MobiMind AI's dynamic **Safety Index** monitors:
+1. 📹 **CCTV & Platform Surveillance**: Monitored corridors and transit stations.
+2. 💡 **Street Lighting & Visibility**: Verified well-lit pedestrian pathways.
+3. 👥 **Commuter Footfall**: Routes with active foot traffic and station security staff.
+
+**Late-Night Tip:** Choose Metro stations with active customer care kiosks or verified EV cabs over unmonitored road shortcuts.`,
+      suggestedPrompts: [
+        'Show routes with Safety Index > 85',
+        'Safest transit mode late at night',
+        'CCTV coverage around city hubs',
+      ],
+    };
+  }
+
+  if (lower.includes('cheap') || lower.includes('budget') || lower.includes('cost') || lower.includes('fare') || lower.includes('save money')) {
+    return {
+      reply: `Here is how typical urban transit fares compare:
+• 🚌 **City Bus**: ₹10 – ₹25 (Unbeatable budget, lowest overall expense)
+• 🚇 **Metro Rail**: ₹20 – ₹50 (Top value: high speed + comfort at 80% discount vs cabs)
+• 🛺 **Shared Auto / Feeder**: ₹30 – ₹60
+• 🚕 **Private Cab / Auto**: ₹180 – ₹450+ (Premium convenience with surge pricing)
+
+Combining **Metro + 5 min walking** saves the average commuter over ₹4,000 every month!`,
+      suggestedPrompts: [
+        'Calculate my monthly savings',
+        'Show cheapest route available',
+        'Smart transit pass discounts',
+      ],
+    };
+  }
+
+  if (lower.includes('wheelchair') || lower.includes('accessible') || lower.includes('ramp') || lower.includes('elevator')) {
+    return {
+      reply: `MobiMind AI is fully committed to barrier-free accessibility:
+• 🛗 **Elevators & Level Ingress**: Primary Metro stations feature street-to-platform step-free elevators.
+• 🟡 **Tactile Paving**: Installed across station concourses and platform safety edges.
+• 🦽 **Priority Spaces**: Dedicated wheelchair areas in coaches 1 & 4 of Metro trains.
+
+You can select the **Accessible First** priority filter anytime in our route planner!`,
+      suggestedPrompts: [
+        'Filter routes with step-free elevators',
+        'Low-floor feeder bus routes',
+        'Station wheelchair assistance contacts',
+      ],
+    };
+  }
+
+  if (lower.includes('eco') || lower.includes('carbon') || lower.includes('green') || lower.includes('co2')) {
+    return {
+      reply: `Every smart transit choice reduces urban emissions! 🌱
+• 🚶 **Walking / Cycling**: 0g CO₂ emissions (Zero footprint + burns 150+ kcal)
+• 🚇 **Metro Rail**: ~18g CO₂/km (Over 85% cleaner than private petrol cars)
+• 🚌 **Electric / CNG Bus**: ~35g CO₂/km per passenger
+• 🚗 **Single-Occupant Cab**: ~190g - 240g CO₂/km
+
+Switching just 3 car trips a week to Metro saves approximately 18 kg of CO₂ per month!`,
+      suggestedPrompts: [
+        'Show zero-emission commute routes',
+        'Calculate my carbon footprint',
+        'Eco-friendly travel tips',
+      ],
+    };
+  }
+
+  return {
+    reply: `Hello! I'm **MobiMind AI**, your Intelligent Smart Mobility Copilot. ✨
+
+I can assist you with:
+• 🗺️ **Multi-Modal Route Optimization**: Balancing speed, cost, safety, and carbon footprint.
+• ⚡ **Traffic & Bottleneck Avoidance**: Helping you bypass peak-hour gridlocks.
+• 🌧️ **Weather-Aware Transit**: Real-time advice for rain and changing weather.
+• ♿ **Accessibility & Step-Free Ingress**: Elevators, ramps, and barrier-free routes.
+
+Tell me where you want to go (e.g. *"Plan a trip from MG Road to Airport"*) or ask any transit question!`,
+    suggestedPrompts: [
+      '⚡ How do I beat peak-hour traffic?',
+      '🌱 Find the lowest carbon route',
+      '☔ Commute advice if it rains today',
+      '♿ Show wheelchair accessible transit',
+    ],
+  };
+}
+
+// ----------------- GEMINI AI CONVERSATIONAL ASSISTANT ----------------- //
+
+export async function chatWithMobiMind(
+  message: string,
+  history: ChatMessage[] = [],
+  context?: {
+    origin?: string;
+    destination?: string;
+    activePriority?: PriorityType;
+    currentRouteTitle?: string;
+  }
+): Promise<ChatResponse> {
+  const weather = getCurrentWeather();
+  try {
+    const systemInstruction = `
+You are MobiMind AI, the world's premier Intelligent Smart Mobility Copilot.
+You are warm, friendly, helpful, concise, and deeply knowledgeable about urban mobility.
+
+Live Urban Mobility Context:
+- Current Weather: ${weather.condition}, ${weather.temperatureC}°C (${weather.advisory})
+${context?.origin && context?.destination ? `- Active Trip in planner: "${context.origin}" to "${context.destination}"` : ''}
+${context?.activePriority ? `- Preferred Priority: ${context.activePriority}` : ''}
+${context?.currentRouteTitle ? `- Selected Route: ${context.currentRouteTitle}` : ''}
+
+Key Responsibilities:
+1. Provide practical, accurate, real-world multi-modal transit advice (Metro, City Buses, EV Cabs, Shared Autos, Micro-mobility/Cycles, Walking).
+2. Help users weigh trade-offs (Time vs Cost vs Carbon Footprint vs Safety Score vs Accessibility).
+3. Keep answers concise, visually appealing (using bullet points and friendly transit emojis).
+4. At the very end of your response, ALWAYS include 2 to 3 relevant follow-up suggestion chips formatted strictly on the last line like:
+[SUGGESTIONS: suggestion 1 | suggestion 2 | suggestion 3]
+5. If the user mentions wanting to plan or travel between two places (e.g. "from A to B"), append on a new line:
+[ACTION: PLAN_ROUTE | origin | destination | priority]
+`;
+
+    const contents: Array<{ role: 'user' | 'model'; parts: Array<{ text: string }> }> = [];
+
+    // Add recent history (up to last 6 turns)
+    for (const h of history.slice(-6)) {
+      contents.push({
+        role: h.role,
+        parts: [{ text: h.text }],
+      });
+    }
+
+    // Add current turn with system instructions
+    contents.push({
+      role: 'user',
+      parts: [{ text: `${systemInstruction}\n\nUser Question:\n${message}` }],
+    });
+
+    const rawText = (await executeGeminiChat(contents)).trim();
+
+      let cleanReply = rawText;
+      let suggestedPrompts: string[] = [
+        'Compare Metro vs Cabs for this journey',
+        'Find the lowest carbon option 🌱',
+        'Show wheelchair accessible stations ♿',
+      ];
+      let quickAction: ChatResponse['quickAction'] = undefined;
+
+      const suggestionsMatch = cleanReply.match(/\[SUGGESTIONS:\s*(.*?)\]/i);
+      if (suggestionsMatch) {
+        cleanReply = cleanReply.replace(suggestionsMatch[0], '').trim();
+        const extracted = suggestionsMatch[1].split('|').map(s => s.trim()).filter(Boolean);
+        if (extracted.length > 0) {
+          suggestedPrompts = extracted;
+        }
+      }
+
+      const actionMatch = cleanReply.match(/\[ACTION:\s*PLAN_ROUTE\s*\|\s*([^|]+)\s*\|\s*([^|]+)(?:\s*\|\s*([^\]]+))?\]/i);
+      if (actionMatch) {
+        cleanReply = cleanReply.replace(actionMatch[0], '').trim();
+        quickAction = {
+          type: 'PLAN_ROUTE',
+          origin: actionMatch[1].trim(),
+          destination: actionMatch[2].trim(),
+          priority: (actionMatch[3]?.trim().toLowerCase() as PriorityType) || 'fastest',
+        };
+      }
+
+      return {
+        reply: cleanReply,
+        suggestedPrompts,
+        quickAction,
+      };
+    } catch (err: any) {
+      console.warn('[Gemini Chat Error]:', err.message);
+    }
+
+  // Fallback to intelligent local reasoning if API key issues or offline
+  return generateLocalCopilotResponse(message, context, weather);
+}
+

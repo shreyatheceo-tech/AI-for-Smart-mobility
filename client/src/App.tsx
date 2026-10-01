@@ -9,6 +9,7 @@ import { LoginPage } from './pages/LoginPage.js';
 import { RegisterPage } from './pages/RegisterPage.js';
 import { ProfilePage } from './pages/ProfilePage.js';
 import { AdminDashboardPage } from './pages/AdminDashboardPage.js';
+import { AiAssistantWidget } from './components/AiAssistantWidget.js';
 
 export const App: React.FC = () => {
   return (
@@ -28,6 +29,7 @@ export const App: React.FC = () => {
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
         </main>
+        <AiAssistantWidget />
       </div>
     </BrowserRouter>
   );

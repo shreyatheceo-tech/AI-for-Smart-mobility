@@ -5,13 +5,14 @@ import { validateBody } from '../middleware/validate.js';
 import {
   generateAiDecision,
   parseNaturalLanguageIntent,
+  chatWithMobiMind,
 } from '../services/geminiService.js';
 import {
   generateMobilityOptions,
   resolveLocationCoords,
 } from '../services/mobilityEngine.js';
 import { getCurrentWeather } from '../services/weatherService.js';
-import { mobilitySearchSchema, naturalLanguageSearchSchema } from '../types/index.js';
+import { mobilitySearchSchema, naturalLanguageSearchSchema, chatMessageSchema } from '../types/index.js';
 
 const router = Router();
 
@@ -119,5 +120,24 @@ router.get('/weather', (req: Request, res: Response): void => {
     weather,
   });
 });
+
+// POST /api/mobility/chat
+router.post(
+  '/chat',
+  validateBody(chatMessageSchema),
+  async (req: Request, res: Response): Promise<void> => {
+    try {
+      const { message, history = [], context } = req.body;
+      const response = await chatWithMobiMind(message, history, context);
+      res.json({
+        success: true,
+        ...response,
+      });
+    } catch (err: any) {
+      console.error('[Mobility Chat Error]:', err);
+      res.status(500).json({ success: false, message: 'Failed to process chat message.' });
+    }
+  }
+);
 
 export default router;

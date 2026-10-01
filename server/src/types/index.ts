@@ -162,3 +162,39 @@ export const saveJourneySchema = z.object({
   aiRecommendation: z.any(),
   explanation: z.string(),
 });
+
+export const chatMessageSchema = z.object({
+  message: z.string().min(1, 'Message cannot be empty'),
+  history: z
+    .array(
+      z.object({
+        role: z.enum(['user', 'model']),
+        text: z.string(),
+      })
+    )
+    .optional(),
+  context: z
+    .object({
+      origin: z.string().optional(),
+      destination: z.string().optional(),
+      activePriority: z.string().optional(),
+    })
+    .optional(),
+});
+
+export interface ChatMessage {
+  role: 'user' | 'model';
+  text: string;
+}
+
+export interface ChatResponse {
+  reply: string;
+  suggestedPrompts: string[];
+  quickAction?: {
+    type: 'PLAN_ROUTE';
+    origin: string;
+    destination: string;
+    priority?: PriorityType;
+  };
+}
+

@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import React, { useState, useEffect } from 'react';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import {
   MapPin,
   Compass,
@@ -39,6 +39,7 @@ export const DashboardPage: React.FC = () => {
   const { runAnalysis, parseNaturalLanguage, isLoading } = useJourney();
   const { user } = useAuth();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
 
   const [inputMode, setInputMode] = useState<'structured' | 'natural'>('structured');
 
@@ -70,6 +71,18 @@ export const DashboardPage: React.FC = () => {
   );
   const [nlLoading, setNlLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
+
+  useEffect(() => {
+    const qOrigin = searchParams.get('origin');
+    const qDest = searchParams.get('destination');
+    const qPriority = searchParams.get('priority') as PriorityType | null;
+    if (qOrigin) setOrigin(qOrigin);
+    if (qDest) setDestination(qDest);
+    if (qPriority && ['fastest', 'cheapest', 'eco', 'safer', 'accessible'].includes(qPriority)) {
+      setPrimaryPriority(qPriority);
+      setSelectedPriorities([qPriority]);
+    }
+  }, [searchParams]);
 
   const handleToggleSecondary = (p: PriorityType) => {
     setSelectedPriorities((prev) =>
