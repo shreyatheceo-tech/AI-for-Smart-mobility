@@ -7,7 +7,10 @@ import {
   UserPreferences,
 } from '../types/index.js';
 
-const API_BASE = '/api';
+const API_BASE =
+  ((import.meta as any).env?.VITE_API_BASE as string) ||
+  ((import.meta as any).env?.VITE_API_URL as string) ||
+  '/api';
 
 function getAuthToken(): string | null {
   return localStorage.getItem('mobimind_auth_token');

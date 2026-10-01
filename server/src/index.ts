@@ -1,5 +1,7 @@
 import express, { Request, Response, NextFunction } from 'express';
 import cors from 'cors';
+import path from 'path';
+import fs from 'fs';
 import { config } from './config/env.js';
 import { initDatabase } from './db/index.js';
 import authRoutes from './routes/authRoutes.js';
@@ -38,19 +40,55 @@ app.get('/api/health', (req: Request, res: Response) => {
   });
 });
 
-// Mount Routes
+// Mount API Routes
 app.use('/api/auth', authRoutes);
 app.use('/api/preferences', preferencesRoutes);
 app.use('/api/mobility', mobilityRoutes);
 app.use('/api/journeys', journeyRoutes);
 
-// 404 Route Handler
-app.use((req: Request, res: Response) => {
+// 404 Route Handler for unmatched /api endpoints
+app.use('/api', (req: Request, res: Response) => {
   res.status(404).json({
     success: false,
     message: `API Route ${req.method} ${req.originalUrl} not found.`,
   });
 });
+
+// Serve frontend static assets if client/dist exists (Full-stack production mode)
+const possibleClientDistPaths = [
+  path.resolve(process.cwd(), '../client/dist'),
+  path.resolve(process.cwd(), 'client/dist'),
+  path.resolve(__dirname, '../../client/dist'),
+  path.resolve(__dirname, '../../../client/dist'),
+];
+
+const clientDist = possibleClientDistPaths.find((p) => fs.existsSync(p));
+
+if (clientDist) {
+  console.log(`[Static] Serving frontend static assets from: ${clientDist}`);
+  app.use(express.static(clientDist));
+
+  // SPA fallback for frontend client routing (e.g. /app, /app/results, /login)
+  app.get('*', (req: Request, res: Response, next: NextFunction) => {
+    if (req.path.startsWith('/api')) {
+      return next();
+    }
+    const indexHtml = path.join(clientDist, 'index.html');
+    if (fs.existsSync(indexHtml)) {
+      res.sendFile(indexHtml);
+    } else {
+      next();
+    }
+  });
+} else {
+  // Generic 404 if no frontend static files exist
+  app.use((req: Request, res: Response) => {
+    res.status(404).json({
+      success: false,
+      message: `Route ${req.method} ${req.originalUrl} not found.`,
+    });
+  });
+}
 
 // Centralized Error Handler
 app.use((err: any, req: Request, res: Response, next: NextFunction) => {
