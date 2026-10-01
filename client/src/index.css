@@ -78,3 +78,20 @@ body {
 .leaflet-popup-tip {
   background: #0f172a !important;
 }
+
+/* Pinterest Aesthetic Tokens */
+.pinterest-shadow {
+  box-shadow: 0 4px 20px -2px rgba(0, 0, 0, 0.05), 0 2px 6px -1px rgba(0, 0, 0, 0.03);
+}
+
+.pinterest-shadow-hover {
+  box-shadow: 0 20px 35px -5px rgba(0, 0, 0, 0.09), 0 10px 15px -3px rgba(0, 0, 0, 0.04);
+}
+
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
